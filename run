@@ -1,0 +1,9 @@
+#!/bin/bash
+mpc clear
+mpc add /
+mpc volume 50
+mpc play
+
+od -t d2 --width=4 /tmp/my_fifo.fifo |
+cut --delimiter ' ' --fields 2- |
+python ./mpd-visualizer.py
