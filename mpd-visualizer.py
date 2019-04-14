@@ -6,12 +6,12 @@ import asyncio
 import websockets
 import json
 
-Fs = 22050
+Fs = 44100
 windowLength = 1024
 
 frequencies = np.arange(windowLength / 2) * Fs / windowLength
 
-nBars = 120
+nBars = 60
 
 windowRate = Fs / windowLength
 
@@ -99,9 +99,13 @@ async def processAudio():
 
 async def sendFrame(websocket, path):
     async for frame in processAudio():
+        t_0 = timer()
         await websocket.send(frame)
+        t_1 = timer()
+        dt = t_1 - t_0
+        print(f'latency: {dt}')
 
 
 asyncio.get_event_loop().run_until_complete(
-    websockets.serve(sendFrame, 'localhost', 8080))
+    websockets.serve(sendFrame, 'localhost', 8765))
 asyncio.get_event_loop().run_forever()

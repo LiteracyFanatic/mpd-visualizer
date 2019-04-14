@@ -1,6 +1,6 @@
 let canvas;
 let ctx;
-let socket = new WebSocket("ws://localhost:8080");
+let socket = new WebSocket("ws://localhost:8765");
 let dpi = window.devicePixelRatio;
 
 const scaling = 10;
