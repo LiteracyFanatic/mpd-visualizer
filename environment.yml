@@ -1,5 +1,3 @@
 name: mpd-visualizer
 dependencies:
   - numpy
-  - matplotlib
-  

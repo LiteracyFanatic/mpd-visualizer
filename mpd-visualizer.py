@@ -1,15 +1,17 @@
 import os
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 from timeit import default_timer as timer
+import asyncio
+import websockets
+import json
 
 Fs = 22050
 windowLength = 1024
 
 frequencies = np.arange(windowLength / 2) * Fs / windowLength
 
-nBars = 30
+nBars = 120
 
 windowRate = Fs / windowLength
 
@@ -46,60 +48,60 @@ def smooth(mag, prevSmoothedMag):
     return smoothedMag
 
 
-fig, ax = plt.subplots()
-rects = ax.bar(np.arange(nBars * 2), np.zeros(nBars * 2))
-ax.set_ylim([0, 20])
+async def processAudio():
+    leftChannel = np.zeros(windowLength)
+    rightChannel = np.zeros(windowLength)
+    sampleNum = 0
+    prevSmoothedMag = np.zeros(nBars * 2)
+    firstWindow = True
+    prevTime = timer()
+    frames = 0
 
-
-def display(spectrum):
-    for rect, h in zip(rects, spectrum):
-        rect.set_height(h)
-    fig.canvas.draw()
-    plt.pause(0.0001)
-
-
-leftChannel = np.zeros(windowLength)
-rightChannel = np.zeros(windowLength)
-sampleNum = 0
-prevSmoothedMag = np.zeros(nBars * 2)
-firstWindow = True
-prevTime = timer()
-frames = 0
-
-for data in sys.stdin:
-    sample = data.split()
-    if len(sample) == 2:
-        [left, right] = sample
-    else:
-        left = right = 0
-
-    leftChannel[sampleNum] = left
-    rightChannel[sampleNum] = right
-
-    if sampleNum == windowLength - 1:
-        leftSpectrum = transform(leftChannel)
-        rightSpectrum = transform(rightChannel)
-        spectrum = np.concatenate(
-            (leftSpectrum, np.flip(rightSpectrum)))
-        if firstWindow:
-            firstWindow = False
+    for data in sys.stdin:
+        sample = data.split()
+        if len(sample) == 2:
+            [left, right] = sample
         else:
-            spectrum = smooth(spectrum, prevSmoothedMag)
-        prevSmoothedMag = spectrum
+            left = right = 0
 
-        display(spectrum)
-        frames += 1
+        leftChannel[sampleNum] = left
+        rightChannel[sampleNum] = right
 
-        t = timer()
-        dt = t - prevTime
-        if dt >= 1:
-            fps = frames / dt
-            prevTime = t
-            frames = 0
-            print(fps)
+        if sampleNum == windowLength - 1:
+            leftSpectrum = transform(leftChannel)
+            rightSpectrum = transform(rightChannel)
+            spectrum = np.concatenate(
+                (leftSpectrum, np.flip(rightSpectrum)))
+            if firstWindow:
+                firstWindow = False
+            else:
+                spectrum = smooth(spectrum, prevSmoothedMag)
+            prevSmoothedMag = spectrum
 
-        leftChannel = np.roll(leftChannel, -shift)
-        rightChannel = np.roll(rightChannel, -shift)
-        sampleNum = windowLength - shift
-    else:
-        sampleNum += 1
+            yield json.dumps(spectrum.tolist())
+
+            frames += 1
+
+            t = timer()
+            dt = t - prevTime
+            if dt >= 1:
+                fps = frames / dt
+                prevTime = t
+                frames = 0
+                print(fps)
+
+            leftChannel = np.roll(leftChannel, -shift)
+            rightChannel = np.roll(rightChannel, -shift)
+            sampleNum = windowLength - shift
+        else:
+            sampleNum += 1
+
+
+async def sendFrame(websocket, path):
+    async for frame in processAudio():
+        await websocket.send(frame)
+
+
+asyncio.get_event_loop().run_until_complete(
+    websockets.serve(sendFrame, 'localhost', 8080))
+asyncio.get_event_loop().run_forever()
