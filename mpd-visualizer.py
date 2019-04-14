@@ -68,6 +68,7 @@ async def processAudio():
         rightChannel[sampleNum] = right
 
         if sampleNum == windowLength - 1:
+            t_0 = timer()
             leftSpectrum = transform(leftChannel)
             rightSpectrum = transform(rightChannel)
             spectrum = np.concatenate(
@@ -77,6 +78,10 @@ async def processAudio():
             else:
                 spectrum = smooth(spectrum, prevSmoothedMag)
             prevSmoothedMag = spectrum
+
+            t_1 = timer()
+            dt = t_1 - t_0
+            # print(f'FFT latency: {dt}')
 
             yield json.dumps(spectrum.tolist())
 
@@ -103,7 +108,7 @@ async def sendFrame(websocket, path):
         await websocket.send(frame)
         t_1 = timer()
         dt = t_1 - t_0
-        print(f'latency: {dt}')
+        # print(f'web socket latency: {dt}')
 
 
 asyncio.get_event_loop().run_until_complete(
