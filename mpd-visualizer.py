@@ -15,12 +15,9 @@ nBars = 60
 
 windowRate = Fs / windowLength
 
-overlap = 0
-shift = windowLength - overlap
-
 gamma = 2
 _, splitInds = np.unique(
-    np.round(((frequencies / np.max(frequencies))**(1 / gamma)) * (nBars - 1)), True)
+    np.floor(((frequencies / np.max(frequencies))**(1 / gamma)) * (nBars)), True)
 splitInds = splitInds[1:]
 
 
@@ -29,20 +26,34 @@ def groupFrequencies(magnitudes):
 
 
 def transform(channel):
+    t = np.zeros(6)
+    t[0] = timer()
     windowed = channel * np.hamming(channel.size)
+    t[1] = timer()
     FFT = np.fft.rfft(windowed)
+    t[2] = timer()
     mag = np.sqrt(FFT.real**2 + FFT.imag**2)
+    t[3] = timer()
     scaled = np.log(mag)
+    t[4] = timer()
     bins = groupFrequencies(scaled)
-    meanMag = np.array(list(map(lambda bin: np.max(bin), bins)))
-    return meanMag
+    t[5] = timer()
+    maxMag = np.zeros(nBars)
+    for i in range(nBars):
+        maxMag[i] = np.max(bins[i])
+    t[5] = timer()
+    dt = np.diff(t)
+    percents = dt / np.sum(dt)
+    # print(percents)
+    # print(np.sum(dt))
+    return maxMag
 
 
 smoothingConstant = 0.00007
+adjustedSmoothingConstant = smoothingConstant**(1 / windowRate)
 
 
 def smooth(mag, prevSmoothedMag):
-    adjustedSmoothingConstant = smoothingConstant**(1 / windowRate)
     smoothedMag = prevSmoothedMag * adjustedSmoothingConstant + \
         mag * (1 - adjustedSmoothingConstant)
     return smoothedMag
@@ -81,7 +92,7 @@ async def processAudio():
 
             t_1 = timer()
             dt = t_1 - t_0
-            # print(f'FFT latency: {dt}')
+            print(f'FFT latency: {dt}')
 
             yield json.dumps(spectrum.tolist())
 
@@ -95,9 +106,7 @@ async def processAudio():
                 frames = 0
                 print(fps)
 
-            leftChannel = np.roll(leftChannel, -shift)
-            rightChannel = np.roll(rightChannel, -shift)
-            sampleNum = windowLength - shift
+            sampleNum = 0
         else:
             sampleNum += 1
 
@@ -108,7 +117,7 @@ async def sendFrame(websocket, path):
         await websocket.send(frame)
         t_1 = timer()
         dt = t_1 - t_0
-        # print(f'web socket latency: {dt}')
+        print(f'web socket latency: {dt}')
 
 
 asyncio.get_event_loop().run_until_complete(
