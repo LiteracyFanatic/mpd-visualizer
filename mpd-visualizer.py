@@ -2,9 +2,29 @@ import os
 import sys
 import numpy as np
 from timeit import default_timer as timer
-import asyncio
-import websockets
-import json
+from tkinter import *
+
+root = Tk()
+cw = root.winfo_screenwidth()
+ch = root.winfo_screenheight()
+c = Canvas(root, width=cw, height=ch)
+c.pack()
+
+scaling = 10
+
+
+def draw(magnitudes):
+    c.delete(ALL)
+
+    w = cw / magnitudes.size
+    gap = w / 8
+    for i in range(magnitudes.size):
+        h = scaling * magnitudes[i]
+        x = i * w + gap
+        y = ch
+        c.create_rectangle(x, y, x + w - gap, y - h, fill="blue")
+    root.update()
+
 
 Fs = 44100
 windowLength = 1024
@@ -59,7 +79,7 @@ def smooth(mag, prevSmoothedMag):
     return smoothedMag
 
 
-async def processAudio():
+def processAudio():
     leftChannel = np.zeros(windowLength)
     rightChannel = np.zeros(windowLength)
     sampleNum = 0
@@ -94,7 +114,7 @@ async def processAudio():
             dt = t_1 - t_0
             print(f'FFT latency: {dt}')
 
-            yield json.dumps(spectrum.tolist())
+            draw(spectrum)
 
             frames += 1
 
@@ -111,15 +131,4 @@ async def processAudio():
             sampleNum += 1
 
 
-async def sendFrame(websocket, path):
-    async for frame in processAudio():
-        t_0 = timer()
-        await websocket.send(frame)
-        t_1 = timer()
-        dt = t_1 - t_0
-        print(f'web socket latency: {dt}')
-
-
-asyncio.get_event_loop().run_until_complete(
-    websockets.serve(sendFrame, 'localhost', 8765))
-asyncio.get_event_loop().run_forever()
+processAudio()

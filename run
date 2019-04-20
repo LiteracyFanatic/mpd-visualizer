@@ -11,5 +11,4 @@ od -t d2 --width=4 /tmp/my_fifo.fifo |
 cut --delimiter ' ' --fields 2- |
 python "$DIR/mpd-visualizer.py" &
 
-chromium --start-fullscreen --aggressive-cache-discard --disable-application-cache "$DIR/index.html" &
-#(sleep 5 && wmctrl -x -r chromium -b add,fullscreen) &
+(sleep 1 && wmctrl -x -r tk -b add,fullscreen) &
