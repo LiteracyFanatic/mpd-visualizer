@@ -9,6 +9,7 @@ mpc play
 
 od -t d2 --width=4 /tmp/my_fifo.fifo |
 cut --delimiter ' ' --fields 2- |
-python "$DIR/mpd-visualizer.py" &
+python "$DIR/spectrum.py" |
+python "$DIR/visualization.py" &
 
 (sleep 1 && wmctrl -x -r tk -b add,fullscreen) &

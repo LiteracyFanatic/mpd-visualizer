@@ -1,30 +1,9 @@
 import os
 import sys
 import numpy as np
+import json
 from timeit import default_timer as timer
-from tkinter import *
-
-root = Tk()
-cw = root.winfo_screenwidth()
-ch = root.winfo_screenheight()
-c = Canvas(root, width=cw, height=ch)
-c.pack()
-
-scaling = 10
-
-
-def draw(magnitudes):
-    c.delete(ALL)
-
-    w = cw / magnitudes.size
-    gap = w / 8
-    for i in range(magnitudes.size):
-        h = scaling * magnitudes[i]
-        x = i * w + gap
-        y = ch
-        c.create_rectangle(x, y, x + w - gap, y - h, fill="blue")
-    root.update()
-
+import time
 
 Fs = 44100
 windowLength = 1024
@@ -112,9 +91,10 @@ def processAudio():
 
             t_1 = timer()
             dt = t_1 - t_0
-            print(f'FFT latency: {dt}')
+            # print(f'FFT latency: {dt}')
 
-            draw(spectrum)
+            print(json.dumps(spectrum.tolist()))
+            # draw(spectrum)
 
             frames += 1
 
@@ -124,7 +104,9 @@ def processAudio():
                 fps = frames / dt
                 prevTime = t
                 frames = 0
-                print(fps)
+                # f = open('/home/jordan/src/mpd-visualizer/fps', 'a+')
+                # f.write(str(fps))
+                # f.close()
 
             sampleNum = 0
         else:
